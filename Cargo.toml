@@ -7,7 +7,7 @@ keywords = ["no-std", "imu", "embedded-hal-driver", "embedded-hal", "icm20689"]
 categories = ["embedded", "hardware-support", "no-std"]
 description = "platform independant Drivers for the ICM20689 6 axis IMU with embedded-hal"
 authors = ["Deepesh Padala"]
-repository = ""
+repository = "https://github.com/DS3a/icm20689_driver_rs.git"
 readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
