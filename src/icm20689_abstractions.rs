@@ -2,7 +2,7 @@
 macro_rules! register {
     ($name:ident, $address:expr) => {
         pub const $name: u8 = $address;
-    }
+    };
 }
 
 const g: f64 = 9.807;

@@ -13,15 +13,18 @@ where
     address: u8,
 }
 
-impl<I> ICM20689<I> where I: i2c::Write + i2c::Read {
+impl<I> ICM20689<I>
+where
+    I: i2c::Write + i2c::Read,
+{
     pub fn new(i2c: I, address: u8) -> Self {
-        Self {
-            i2c,
-            address,
-        }
+        Self { i2c, address }
     }
 
-    pub fn init(&self) {
+    pub fn init<D>(&self, delay: &mut D)
+    where
+        D: DelayMs<u16>,
+    {
         // TODO check documentation pg 48
         // set Power_management_1(0x6B) to choose the best clock source
         // reset the icm20689
