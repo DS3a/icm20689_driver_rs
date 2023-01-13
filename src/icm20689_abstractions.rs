@@ -5,6 +5,13 @@ macro_rules! register {
     };
 }
 
+macro_rules! register_value {
+    ($name:ident, $address:expr) => {
+        pub const $name: u8 = $address;
+    };
+}
+
+
 const g: f64 = 9.807;
 const I2C_RATE: u32 = 400_000;
 
@@ -21,6 +28,15 @@ pub enum AccelConfig {
     ACCEL_RANGE_8G = 0x10,
     ACCEL_RANGE_16G = 0x18,
 }
+
+pub mod power_management {
+    register!(PWR_MGMT_1, 0x6b);
+    register!(PWR_MGMT_2, 0x6c);
+}
+
+register_value!(CLOCK_SEL_PLL, 0x01); // to be written to PWR_MGMT_1
+register_value!(PWR_RESET, 0x80); // to be written to PWR_MGMT_1
+register_value!(SENSOR_EN, 0x00); // to be written to PWR_MGMT_2
 
 pub mod configuration {
     register!(GYRO_CONFIG, 0x1b);
