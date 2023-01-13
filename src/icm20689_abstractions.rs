@@ -11,10 +11,15 @@ macro_rules! register_value {
     };
 }
 
+pub const g: f64 = 9.807;
+pub const d2r: f64 = 3.14159265359f64/180.0f64;
+pub const r2d: f64 = 1f64/d2r;
+pub const I2C_RATE: u32 = 400_000;
 
-const g: f64 = 9.807;
-const I2C_RATE: u32 = 400_000;
+register!(WHO_AM_I, 0x75);
 
+#[repr(u8)]
+#[derive(Clone, Copy)]
 pub enum GyroConfig {
     GYRO_RANGE_250DPS = 0x00,
     GYRO_RANGE_500DPS = 0x08,
@@ -22,6 +27,8 @@ pub enum GyroConfig {
     GYRO_RANGE_2000DPS = 0x18,
 }
 
+#[repr(u8)]
+#[derive(Clone, Copy)]
 pub enum AccelConfig {
     ACCEL_RANGE_2G = 0x00,
     ACCEL_RANGE_4G = 0x08,
@@ -39,8 +46,10 @@ register_value!(PWR_RESET, 0x80); // to be written to PWR_MGMT_1
 register_value!(SENSOR_EN, 0x00); // to be written to PWR_MGMT_2
 
 pub mod configuration {
+    register!(CONFIG, 0x1a);
     register!(GYRO_CONFIG, 0x1b);
     register!(ACCEL_CONFIG, 0x1c);
+    register!(ACCEL_CONFIG_2, 0x1d);
 }
 
 pub mod gyroscope_measurements {
