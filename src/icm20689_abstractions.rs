@@ -12,8 +12,8 @@ macro_rules! register_value {
 }
 
 pub const g: f64 = 9.807;
-pub const d2r: f64 = 3.14159265359f64/180.0f64;
-pub const r2d: f64 = 1f64/d2r;
+pub const d2r: f64 = 3.14159265359f64 / 180.0f64; // convert degrees to radian
+pub const r2d: f64 = 1f64 / d2r; // convert radian to degrees
 pub const I2C_RATE: u32 = 400_000;
 
 register!(WHO_AM_I, 0x75);
@@ -27,6 +27,9 @@ pub enum GyroConfig {
     GYRO_RANGE_2000DPS = 0x18,
 }
 
+register_value!(GYRO_FCHOICE_B_8173HZ, 0x01);
+register_value!(GYRO_FCHoice_b_3281HZ, 0x10);
+
 #[repr(u8)]
 #[derive(Clone, Copy)]
 pub enum AccelConfig {
@@ -34,6 +37,42 @@ pub enum AccelConfig {
     ACCEL_RANGE_4G = 0x08,
     ACCEL_RANGE_8G = 0x10,
     ACCEL_RANGE_16G = 0x18,
+}
+
+#[repr(u8)]
+#[derive(Clone, Copy)]
+pub enum AccelDLPFBW {
+    ACCEL_DLPF_218HZ = 0x01,
+    ACCEL_DLPF_99HZ = 0x02,
+    ACCEL_DLPF_45HZ = 0x03,
+    ACCEL_DLPF_21HZ = 0x04,
+    ACCEL_DLPF_10HZ = 0x05,
+    ACCEL_DLPF_5HZ = 0x06,
+    ACCEL_DLPF_420HZ = 0x07,
+    ACCEL_DLPF_1046HZ = 0x08,
+}
+
+#[repr(u8)]
+#[derive(Clone, Copy)]
+pub enum GyroDLPFBW {
+    GYRO_DLPF_250HZ = 0x00,
+    GYRO_DLPF_176HZ = 0x01,
+    GYRO_DLPF_92HZ = 0x02,
+    GYRO_DLPF_41HZ = 0x03,
+    GYRO_DLPF_20HZ = 0x04,
+    GYRO_DLPF_10HZ = 0x05,
+    GYRO_DLPF_5HZ = 0x06,
+}
+
+#[derive(Clone, Copy)]
+pub enum DLPFBandwidth {
+    DLPF_BANDWIDTH_MAX,
+    DLPF_BANDWIDTH_218HZ,
+    DLPF_BANDWIDTH_99HZ,
+    DLPF_BANDWIDTH_45HZ,
+    DLPF_BANDWIDTH_21HZ,
+    DLPF_BANDWIDTH_10HZ,
+    DLPF_BANDWIDTH_5HZ,
 }
 
 pub mod power_management {
