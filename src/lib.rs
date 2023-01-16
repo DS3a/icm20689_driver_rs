@@ -69,6 +69,14 @@ where
         }
     }
 
+    fn read_registers(&mut self, addr: u8, buf: &mut [u8]) -> Result<(), ICMError> {
+        if let Ok(()) = self.i2c.write_read(self.icm_address, &[addr], buf) {
+            Ok(())
+        } else {
+            Err(ICMError::I2cReadError)
+        }
+    }
+
     pub fn new(i2c: I, icm_address: u8) -> Self {
         Self {
             i2c,
@@ -253,6 +261,13 @@ where
     // TODO add function to read accelerometer
     // TODO add function to read gyroscope
     // TODO add function to read temperature
+    pub fn read_sensor(&mut self) -> Result<(), ICMError> {
+        let mut buffer: [u8; 15] = [0u8; 15];
+        self.read_registers(abs::IMU_OUT, &mut buffer);
+        // TODO fill counts, and make measurements
+        Ok(())
+    }
+
 
     // TODO add function to calibrate gyroscope
     pub fn calibrate_gyro(&mut self) -> Result<(), ICMError> {

@@ -109,3 +109,6 @@ pub mod accelerometer_measurements {
     register!(ACCEL_ZOUT_H, 0x3f);
     register!(ACCEL_ZOUT_L, 0x40);
 }
+
+// can be used to read the entire IMU
+register!(IMU_OUT, accelerometer_measurements::ACCEL_XOUT_H);
