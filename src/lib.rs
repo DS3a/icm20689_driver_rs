@@ -24,6 +24,8 @@ where
 
     gyro_scale: f64,
     gyro_range: GyroConfig,
+
+    // TODO add bandwidth, and srd for calibrate function
 }
 
 impl<I> ICM20689<I>
@@ -213,14 +215,18 @@ where
     // TODO add function to read gyroscope
     // TODO add function to read temperature
 
+    // TODO add function to calibrate gyroscope
     pub fn calibrate_gyro(&mut self) -> Result<(), ICMError> {
         self.write_reg(
             abs::configuration::GYRO_CONFIG,
             abs::GyroConfig::GYRO_RANGE_250DPS as u8,
         ); // temporarily
 
+        unimplemented!();
         Ok(())
     }
+
+    // TODO add function to calibrate accelerometer
 
     fn whoami(&mut self) -> Result<u8, ICMError> {
         let whoami_addr: u8 = abs::WHO_AM_I;
