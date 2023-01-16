@@ -3,7 +3,7 @@
 use embedded_hal::blocking::{delay::DelayMs, i2c};
 
 mod icm20689_abstractions;
-pub use abs::{AccelConfig, GyroConfig};
+pub use abs::{AccelConfig, DLPFBandwidth, GyroConfig};
 use icm20689_abstractions as abs;
 
 pub enum ICMError {
@@ -25,7 +25,8 @@ where
     gyro_scale: f64,
     gyro_range: GyroConfig,
 
-    // TODO add bandwidth, and srd for calibrate function
+    bandwidth: DLPFBandwidth,
+    srd: u8,
 }
 
 impl<I> ICM20689<I>
@@ -57,6 +58,9 @@ where
 
             gyro_scale: 0f64,
             gyro_range: GyroConfig::GYRO_RANGE_2000DPS,
+
+            bandwidth: DLPFBandwidth::DLPF_BANDWIDTH_MAX,
+            srd: 0u8,
         }
     }
 
@@ -97,8 +101,11 @@ where
 
             // set LPF for accelerometer to 0x8 for now
             // TODO tune these bandwidths experimentally check page 39 to 41 in documentation
-            self.write_reg(abs::configuration::ACCEL_CONFIG_2, 0x8)?;
-            self.write_reg(abs::configuration::CONFIG, 0x0)?;
+            self.set_dlpf_bandwidth(self.bandwidth)?;
+            self.set_srd(self.srd)?;
+
+            // self.write_reg(abs::configuration::ACCEL_CONFIG_2, 0x8)?;
+            // self.write_reg(abs::configuration::CONFIG, 0x0)?;
             Ok(())
         } else {
             // if there's an error, wait for 40 millis and try again
@@ -133,7 +140,7 @@ where
         Ok(())
     }
 
-    pub fn set_DLPF_bandwidth(&mut self, bandwidth: abs::DLPFBandwidth) -> Result<(), ICMError> {
+    pub fn set_dlpf_bandwidth(&mut self, bandwidth: abs::DLPFBandwidth) -> Result<(), ICMError> {
         match (bandwidth) {
             abs::DLPFBandwidth::DLPF_BANDWIDTH_MAX => {
                 self.write_reg(
@@ -211,6 +218,13 @@ where
         Ok(())
     }
 
+    pub fn set_srd(&mut self, srd: u8) -> Result<(), ICMError> {
+        self.write_reg(abs::SMPLRT_DIV, 19u8)?;
+        self.write_reg(abs::SMPLRT_DIV, srd)?;
+        self.srd = srd;
+        Ok(())
+    }
+
     // TODO add function to read accelerometer
     // TODO add function to read gyroscope
     // TODO add function to read temperature
@@ -220,9 +234,36 @@ where
         self.write_reg(
             abs::configuration::GYRO_CONFIG,
             abs::GyroConfig::GYRO_RANGE_250DPS as u8,
-        ); // temporarily
+        )?; // temporarily
+
+        let old_bandwidth = self.bandwidth.clone();
+        self.set_dlpf_bandwidth(DLPFBandwidth::DLPF_BANDWIDTH_21HZ)?;
+
+        let old_srd = self.srd.clone();
+        self.set_srd(19u8)?;
 
         unimplemented!();
+        /*
+        _gyroBD[0] = 0;
+        _gyroBD[1] = 0;
+        _gyroBD[2] = 0;
+        for (size_t i=0; i < _numSamples; i++) {
+        readSensor();
+        _gyroBD[0] += (getGyroX_rads() + _gyroB[0])/((double)_numSamples);
+        _gyroBD[1] += (getGyroY_rads() + _gyroB[1])/((double)_numSamples);
+        _gyroBD[2] += (getGyroZ_rads() + _gyroB[2])/((double)_numSamples);
+        delay(20);
+    }
+        _gyroB[0] = (double)_gyroBD[0];
+        _gyroB[1] = (double)_gyroBD[1];
+        _gyroB[2] = (double)_gyroBD[2];
+
+         */
+
+
+        self.set_gyro_range(self.gyro_range)?;
+        self.set_dlpf_bandwidth(old_bandwidth)?;
+        self.set_srd(old_srd)?;
         Ok(())
     }
 

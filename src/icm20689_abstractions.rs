@@ -17,6 +17,7 @@ pub const r2d: f64 = 1f64 / d2r; // convert radian to degrees
 pub const I2C_RATE: u32 = 400_000;
 
 register!(WHO_AM_I, 0x75);
+register!(SMPLRT_DIV, 0x19);
 
 #[repr(u8)]
 #[derive(Clone, Copy)]
