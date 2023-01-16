@@ -6,6 +6,22 @@ mod icm20689_abstractions;
 pub use abs::{AccelConfig, DLPFBandwidth, GyroConfig};
 use icm20689_abstractions as abs;
 
+#[derive(Default)]
+struct Calibration {
+    num_samples: usize,
+    BD: [f64; 3],
+    B: [f64; 3],
+    BS: [f64; 3],
+    min: [f64; 3],
+    max: [f64; 3],
+}
+
+#[derive(Default)]
+pub struct Measurement {
+    counts: [f64; 3],
+    pub values: [f64; 3],
+}
+
 pub enum ICMError {
     I2cReadError,
     I2cWriteError,
@@ -21,9 +37,13 @@ where
 
     accel_scale: f64,
     accel_range: AccelConfig,
+    accel_calibration: Calibration,
+    accel_measurement: Measurement,
 
     gyro_scale: f64,
     gyro_range: GyroConfig,
+    gyro_calibration: Calibration,
+    gyro_measurement: Measurement,
 
     bandwidth: DLPFBandwidth,
     srd: u8,
@@ -53,11 +73,16 @@ where
         Self {
             i2c,
             icm_address,
+
             accel_scale: 0f64, // will be set to the actual scale when init() is called
             accel_range: AccelConfig::ACCEL_RANGE_16G,
+            accel_calibration: Calibration::default(),
+            accel_measurement: Measurement::default(),
 
             gyro_scale: 0f64,
             gyro_range: GyroConfig::GYRO_RANGE_2000DPS,
+            gyro_calibration: Calibration::default(),
+            gyro_measurement: Measurement::default(),
 
             bandwidth: DLPFBandwidth::DLPF_BANDWIDTH_MAX,
             srd: 0u8,
@@ -141,7 +166,7 @@ where
     }
 
     pub fn set_dlpf_bandwidth(&mut self, bandwidth: abs::DLPFBandwidth) -> Result<(), ICMError> {
-        match (bandwidth) {
+        match bandwidth {
             abs::DLPFBandwidth::DLPF_BANDWIDTH_MAX => {
                 self.write_reg(
                     abs::configuration::ACCEL_CONFIG_2,
@@ -231,10 +256,8 @@ where
 
     // TODO add function to calibrate gyroscope
     pub fn calibrate_gyro(&mut self) -> Result<(), ICMError> {
-        self.write_reg(
-            abs::configuration::GYRO_CONFIG,
-            abs::GyroConfig::GYRO_RANGE_250DPS as u8,
-        )?; // temporarily
+        let old_gyro_range = self.gyro_range;
+        self.set_gyro_range(abs::GyroConfig::GYRO_RANGE_250DPS)?;
 
         let old_bandwidth = self.bandwidth.clone();
         self.set_dlpf_bandwidth(DLPFBandwidth::DLPF_BANDWIDTH_21HZ)?;
@@ -242,26 +265,32 @@ where
         let old_srd = self.srd.clone();
         self.set_srd(19u8)?;
 
-        unimplemented!();
+        self.gyro_calibration.num_samples = 100;
+        self.gyro_calibration.BD[0] = 0f64;
+        self.gyro_calibration.BD[1] = 0f64;
+        self.gyro_calibration.BD[2] = 0f64;
+        for i in 0..(self.gyro_calibration.num_samples) {
+            // read_sensor();
+            // self.gyro_calibration.BD.0 +=
+        }
         /*
-        _gyroBD[0] = 0;
-        _gyroBD[1] = 0;
-        _gyroBD[2] = 0;
-        for (size_t i=0; i < _numSamples; i++) {
-        readSensor();
-        _gyroBD[0] += (getGyroX_rads() + _gyroB[0])/((double)_numSamples);
-        _gyroBD[1] += (getGyroY_rads() + _gyroB[1])/((double)_numSamples);
-        _gyroBD[2] += (getGyroZ_rads() + _gyroB[2])/((double)_numSamples);
-        delay(20);
-    }
-        _gyroB[0] = (double)_gyroBD[0];
-        _gyroB[1] = (double)_gyroBD[1];
-        _gyroB[2] = (double)_gyroBD[2];
+            _gyroBD[0] = 0;
+            _gyroBD[1] = 0;
+            _gyroBD[2] = 0;
+            for (size_t i=0; i < _numSamples; i++) {
+            readSensor();
+            _gyroBD[0] += (getGyroX_rads() + _gyroB[0])/((double)_numSamples);
+            _gyroBD[1] += (getGyroY_rads() + _gyroB[1])/((double)_numSamples);
+            _gyroBD[2] += (getGyroZ_rads() + _gyroB[2])/((double)_numSamples);
+            delay(20);
+        }
+            _gyroB[0] = (double)_gyroBD[0];
+            _gyroB[1] = (double)_gyroBD[1];
+            _gyroB[2] = (double)_gyroBD[2];
 
-         */
+             */
 
-
-        self.set_gyro_range(self.gyro_range)?;
+        self.set_gyro_range(old_gyro_range)?;
         self.set_dlpf_bandwidth(old_bandwidth)?;
         self.set_srd(old_srd)?;
         Ok(())
