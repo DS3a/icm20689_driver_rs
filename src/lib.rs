@@ -18,7 +18,7 @@ struct Calibration {
 
 #[derive(Default)]
 pub struct Measurement {
-    counts: [f64; 3],
+    counts: [i16; 3],
     pub values: [f64; 3],
 }
 
@@ -263,11 +263,19 @@ where
     // TODO add function to read temperature
     pub fn read_sensor(&mut self) -> Result<(), ICMError> {
         let mut buffer: [u8; 15] = [0u8; 15];
-        self.read_registers(abs::IMU_OUT, &mut buffer);
-        // TODO fill counts, and make measurements
+        self.read_registers(abs::IMU_OUT, &mut buffer)?;
+        self.accel_measurement.counts[0] = (((buffer[0] as u16) << 8) | (buffer[1] as u16)) as i16;
+        self.accel_measurement.counts[1] = (((buffer[2] as u16) << 8) | (buffer[3] as u16)) as i16;
+        self.accel_measurement.counts[2] = (((buffer[4] as u16) << 8) | (buffer[5] as u16)) as i16;
+
+        self.gyro_measurement.counts[0] = (((buffer[8] as u16) << 8) | (buffer[9] as u16)) as i16;
+        self.gyro_measurement.counts[1] = (((buffer[10] as u16) << 8) | (buffer[11] as u16)) as i16;
+        self.gyro_measurement.counts[2] = (((buffer[12] as u16) << 8) | (buffer[13] as u16)) as i16;
+        // TODO convert counts to measurements
+
+
         Ok(())
     }
-
 
     // TODO add function to calibrate gyroscope
     pub fn calibrate_gyro(&mut self) -> Result<(), ICMError> {
