@@ -9,14 +9,14 @@ use icm20689_abstractions as abs;
 // macro to transform the coordinate frame of the measurements
 macro_rules! turn {
     ($T:expr, $vec:expr) => {
-        $T[0]*($vec[0] as f64) + $T[1]*($vec[1] as f64) + $T[2]*($vec[2] as f64)
-    }
+        $T[0] * ($vec[0] as f64) + $T[1] * ($vec[1] as f64) + $T[2] * ($vec[2] as f64)
+    };
 }
 
 macro_rules! read_hl {
     ($buffer:expr, $start_bit_index:expr) => {
         ((($buffer[$start_bit_index] as u16) << 8) | ($buffer[$start_bit_index + 1] as u16)) as i16
-    }
+    };
 }
 
 struct Calibration {
@@ -64,11 +64,9 @@ where
     icm_address: u8,
 
     accel_range: AccelConfig,
-    accel_calibration: Calibration,
     accel_measurement: Measurement,
 
     gyro_range: GyroConfig,
-    gyro_calibration: Calibration,
     gyro_measurement: Measurement,
 
     temp_measurement: f64,
@@ -111,11 +109,9 @@ where
             icm_address,
 
             accel_range: AccelConfig::ACCEL_RANGE_16G,
-            accel_calibration: Calibration::default(),
             accel_measurement: Measurement::default(),
 
             gyro_range: GyroConfig::GYRO_RANGE_2000DPS,
-            gyro_calibration: Calibration::default(),
             gyro_measurement: Measurement::default(),
 
             temp_measurement: 0f64,
@@ -295,15 +291,18 @@ where
         self.gyro_measurement.counts[1] = read_hl!(buffer, 10usize);
         self.gyro_measurement.counts[2] = read_hl!(buffer, 12usize);
 
-
         let acc_counts = &self.accel_measurement.counts;
         let acc_values = &mut self.accel_measurement.values;
         let acc_calib = &self.accel_measurement.calibration;
-        acc_values[0] = (turn!(abs::tX, acc_counts) * acc_calib.scale - acc_calib.B[0]*acc_calib.S[0]) as f64;
-        acc_values[1] = (turn!(abs::tY, acc_counts) * acc_calib.scale - acc_calib.B[1]*acc_calib.S[1]) as f64;
-        acc_values[2] = (turn!(abs::tZ, acc_counts) * acc_calib.scale - acc_calib.B[2]*acc_calib.S[2]) as f64;
+        acc_values[0] =
+            (turn!(abs::tX, acc_counts) * acc_calib.scale - acc_calib.B[0] * acc_calib.S[0]) as f64;
+        acc_values[1] =
+            (turn!(abs::tY, acc_counts) * acc_calib.scale - acc_calib.B[1] * acc_calib.S[1]) as f64;
+        acc_values[2] =
+            (turn!(abs::tZ, acc_counts) * acc_calib.scale - acc_calib.B[2] * acc_calib.S[2]) as f64;
 
-        self.temp_measurement = (((temp_counts as f64) - abs::temp_offset)/abs::temp_scale) + abs::temp_offset;
+        self.temp_measurement =
+            (((temp_counts as f64) - abs::temp_offset) / abs::temp_scale) + abs::temp_offset;
 
         let gyro_counts = &self.gyro_measurement.counts;
         let gyro_values = &mut self.gyro_measurement.values;
@@ -315,9 +314,10 @@ where
         Ok(())
     }
 
-    // TODO add function to calibrate gyroscope
-    pub fn calibrate_gyro(&mut self) -> Result<(), ICMError> {
-        let old_gyro_range = self.gyro_range;
+    pub fn calibrate_gyro<D>(&mut self, delay: &mut D)-> Result<(), ICMError>
+        where D: DelayMs<u16>
+    {
+        let old_gyro_range = self.gyro_range.clone();
         self.set_gyro_range(abs::GyroConfig::GYRO_RANGE_250DPS)?;
 
         let old_bandwidth = self.bandwidth.clone();
@@ -326,30 +326,24 @@ where
         let old_srd = self.srd.clone();
         self.set_srd(19u8)?;
 
-        self.gyro_calibration.num_samples = 100;
-        self.gyro_calibration.BD[0] = 0f64;
-        self.gyro_calibration.BD[1] = 0f64;
-        self.gyro_calibration.BD[2] = 0f64;
-        for i in 0..(self.gyro_calibration.num_samples) {
-            // read_sensor();
-            // self.gyro_calibration.BD.0 +=
+        self.gyro_measurement.calibration.num_samples = 100;
+        self.gyro_measurement.calibration.BD[0] = 0f64;
+        self.gyro_measurement.calibration.BD[1] = 0f64;
+        self.gyro_measurement.calibration.BD[2] = 0f64;
+        for _ in 0..(self.gyro_measurement.calibration.num_samples) {
+            self.read_sensor()?;
+            let calib = &mut self.gyro_measurement.calibration;
+            let values = &self.gyro_measurement.values;
+            calib.BD[0] += (values[0] + calib.B[0]) / (calib.num_samples as f64);
+            calib.BD[1] += (values[1] + calib.B[1]) / (calib.num_samples as f64);
+            calib.BD[2] += (values[2] + calib.B[2]) / (calib.num_samples as f64);
+            delay.delay_ms(20);
         }
-        /*
-            _gyroBD[0] = 0;
-            _gyroBD[1] = 0;
-            _gyroBD[2] = 0;
-            for (size_t i=0; i < _numSamples; i++) {
-            readSensor();
-            _gyroBD[0] += (getGyroX_rads() + _gyroB[0])/((double)_numSamples);
-            _gyroBD[1] += (getGyroY_rads() + _gyroB[1])/((double)_numSamples);
-            _gyroBD[2] += (getGyroZ_rads() + _gyroB[2])/((double)_numSamples);
-            delay(20);
-        }
-            _gyroB[0] = (double)_gyroBD[0];
-            _gyroB[1] = (double)_gyroBD[1];
-            _gyroB[2] = (double)_gyroBD[2];
 
-             */
+        let calib = &mut self.gyro_measurement.calibration;
+        calib.B[0] = calib.BD[0];
+        calib.B[1] = calib.BD[1];
+        calib.B[2] = calib.BD[2];
 
         self.set_gyro_range(old_gyro_range)?;
         self.set_dlpf_bandwidth(old_bandwidth)?;
@@ -369,4 +363,5 @@ where
 
 /*
  1. TODO add calibration functions to find bias and scale
+ 2. TODO add functions to get the values measured
 */
