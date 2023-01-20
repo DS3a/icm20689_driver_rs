@@ -6,18 +6,46 @@ mod icm20689_abstractions;
 pub use abs::{AccelConfig, DLPFBandwidth, GyroConfig};
 use icm20689_abstractions as abs;
 
-#[derive(Default)]
+// macro to transform the coordinate frame of the measurements
+macro_rules! turn {
+    ($T:expr, $vec:expr) => {
+        $T[0]*($vec[0] as f64) + $T[1]*($vec[1] as f64) + $T[2]*($vec[2] as f64)
+    }
+}
+
+macro_rules! read_hl {
+    ($buffer:expr, $start_bit_index:expr) => {
+        ((($buffer[$start_bit_index] as u16) << 8) | ($buffer[$start_bit_index + 1] as u16)) as i16
+    }
+}
+
 struct Calibration {
+    scale: f64,
     num_samples: usize,
     BD: [f64; 3],
     B: [f64; 3],
-    BS: [f64; 3],
+    S: [f64; 3],
     min: [f64; 3],
     max: [f64; 3],
 }
 
+impl Default for Calibration {
+    fn default() -> Self {
+        Self {
+            scale: 0f64,
+            num_samples: 100usize,
+            BD: [0f64, 0f64, 0f64],
+            B: [0f64, 0f64, 0f64],
+            S: [1f64, 1f64, 1f64],
+            min: [0f64, 0f64, 0f64],
+            max: [0f64, 0f64, 0f64],
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Measurement {
+    calibration: Calibration,
     counts: [i16; 3],
     pub values: [f64; 3],
 }
@@ -35,12 +63,10 @@ where
     i2c: I,
     icm_address: u8,
 
-    accel_scale: f64,
     accel_range: AccelConfig,
     accel_calibration: Calibration,
     accel_measurement: Measurement,
 
-    gyro_scale: f64,
     gyro_range: GyroConfig,
     gyro_calibration: Calibration,
     gyro_measurement: Measurement,
@@ -82,12 +108,10 @@ where
             i2c,
             icm_address,
 
-            accel_scale: 0f64, // will be set to the actual scale when init() is called
             accel_range: AccelConfig::ACCEL_RANGE_16G,
             accel_calibration: Calibration::default(),
             accel_measurement: Measurement::default(),
 
-            gyro_scale: 0f64,
             gyro_range: GyroConfig::GYRO_RANGE_2000DPS,
             gyro_calibration: Calibration::default(),
             gyro_measurement: Measurement::default(),
@@ -102,7 +126,6 @@ where
         D: DelayMs<u16>,
     {
         delay.delay_ms(80);
-        // TODO check documentation pg 48
 
         // telling the ICM to choose the best clock source
         if let Result::Ok(()) = self.i2c.write(
@@ -132,13 +155,11 @@ where
             self.set_accel_range(self.accel_range)?;
             self.set_gyro_range(self.gyro_range)?;
 
-            // set LPF for accelerometer to 0x8 for now
             // TODO tune these bandwidths experimentally check page 39 to 41 in documentation
             self.set_dlpf_bandwidth(self.bandwidth)?;
             self.set_srd(self.srd)?;
 
-            // self.write_reg(abs::configuration::ACCEL_CONFIG_2, 0x8)?;
-            // self.write_reg(abs::configuration::CONFIG, 0x0)?;
+            // TODO calibrate gyro and accelerometer
             Ok(())
         } else {
             // if there's an error, wait for 40 millis and try again
@@ -150,7 +171,7 @@ where
     pub fn set_accel_range(&mut self, range: abs::AccelConfig) -> Result<(), ICMError> {
         self.accel_range = range;
         self.write_reg(abs::configuration::ACCEL_CONFIG, self.accel_range as u8)?;
-        self.accel_scale = (abs::g / 32767.5f64)
+        self.accel_measurement.calibration.scale = (abs::g / 32767.5f64)
             * match range {
                 abs::AccelConfig::ACCEL_RANGE_2G => 2f64,
                 abs::AccelConfig::ACCEL_RANGE_4G => 4f64,
@@ -163,7 +184,7 @@ where
     pub fn set_gyro_range(&mut self, range: abs::GyroConfig) -> Result<(), ICMError> {
         self.gyro_range = range;
         self.write_reg(abs::configuration::GYRO_CONFIG, self.gyro_range as u8)?;
-        self.gyro_scale = (abs::d2r / 32767.5f64)
+        self.gyro_measurement.calibration.scale = (abs::d2r / 32767.5f64)
             * match range {
                 abs::GyroConfig::GYRO_RANGE_250DPS => 250f64,
                 abs::GyroConfig::GYRO_RANGE_500DPS => 500f64,
@@ -264,15 +285,31 @@ where
     pub fn read_sensor(&mut self) -> Result<(), ICMError> {
         let mut buffer: [u8; 15] = [0u8; 15];
         self.read_registers(abs::IMU_OUT, &mut buffer)?;
-        self.accel_measurement.counts[0] = (((buffer[0] as u16) << 8) | (buffer[1] as u16)) as i16;
-        self.accel_measurement.counts[1] = (((buffer[2] as u16) << 8) | (buffer[3] as u16)) as i16;
-        self.accel_measurement.counts[2] = (((buffer[4] as u16) << 8) | (buffer[5] as u16)) as i16;
+        // self.accel_measurement.counts[0] = (((buffer[0] as u16) << 8) | (buffer[1] as u16)) as i16;
+        self.accel_measurement.counts[0] = read_hl!(buffer, 0usize);
+        self.accel_measurement.counts[1] = read_hl!(buffer, 2usize);
+        self.accel_measurement.counts[2] = read_hl!(buffer, 4usize);
 
-        self.gyro_measurement.counts[0] = (((buffer[8] as u16) << 8) | (buffer[9] as u16)) as i16;
-        self.gyro_measurement.counts[1] = (((buffer[10] as u16) << 8) | (buffer[11] as u16)) as i16;
-        self.gyro_measurement.counts[2] = (((buffer[12] as u16) << 8) | (buffer[13] as u16)) as i16;
+        self.gyro_measurement.counts[0] = read_hl!(buffer, 8usize);
+        self.gyro_measurement.counts[1] = read_hl!(buffer, 10usize);
+        self.gyro_measurement.counts[2] = read_hl!(buffer, 12usize);
         // TODO convert counts to measurements
 
+        let acc_counts = &self.accel_measurement.counts;
+        let acc_values = &mut self.accel_measurement.values;
+        let acc_calib = &self.accel_measurement.calibration;
+
+        acc_values[0] = (turn!(abs::tX, acc_counts) * acc_calib.scale - acc_calib.B[0]*acc_calib.S[0]) as f64;
+        acc_values[1] = (turn!(abs::tY, acc_counts) * acc_calib.scale - acc_calib.B[1]*acc_calib.S[1]) as f64;
+        acc_values[2] = (turn!(abs::tZ, acc_counts) * acc_calib.scale - acc_calib.B[2]*acc_calib.S[2]) as f64;
+
+        let gyro_counts = &self.gyro_measurement.counts;
+        let gyro_values = &mut self.gyro_measurement.values;
+        let gyro_calib = &self.gyro_measurement.calibration;
+
+        gyro_values[0] = (turn!(abs::tX, gyro_counts) * gyro_calib.scale - gyro_calib.B[0]) as f64;
+        gyro_values[1] = (turn!(abs::tY, gyro_counts) * gyro_calib.scale - gyro_calib.B[1]) as f64;
+        gyro_values[2] = (turn!(abs::tZ, gyro_counts) * gyro_calib.scale - gyro_calib.B[2]) as f64;
 
         Ok(())
     }

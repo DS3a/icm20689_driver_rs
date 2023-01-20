@@ -11,6 +11,9 @@ macro_rules! register_value {
     };
 }
 
+pub const temp_scale: f64 = 333.87f64;
+pub const temp_offset: f64 = 21.0f64;
+
 pub const g: f64 = 9.807;
 pub const d2r: f64 = 3.14159265359f64 / 180.0f64; // convert degrees to radian
 pub const r2d: f64 = 1f64 / d2r; // convert radian to degrees
@@ -29,7 +32,11 @@ pub enum GyroConfig {
 }
 
 register_value!(GYRO_FCHOICE_B_8173HZ, 0x01);
-register_value!(GYRO_FCHoice_b_3281HZ, 0x10);
+register_value!(GYRO_FCHOICE_B_3281HZ, 0x10);
+
+pub const tX: [f64; 3] = [0f64, 1f64, 0f64];
+pub const tY: [f64; 3] = [1f64, 0f64, 0f64];
+pub const tZ: [f64; 3] = [0f64, 0f64, -1f64];
 
 #[repr(u8)]
 #[derive(Clone, Copy)]
