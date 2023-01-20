@@ -364,4 +364,5 @@ where
 /*
  1. TODO add calibration functions to find bias and scale
  2. TODO add functions to get the values measured
-*/
+ 3. TODO add functionality to preload calibration values
+ */
