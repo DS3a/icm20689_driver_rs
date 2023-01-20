@@ -71,6 +71,8 @@ where
     gyro_calibration: Calibration,
     gyro_measurement: Measurement,
 
+    temp_measurement: f64,
+
     bandwidth: DLPFBandwidth,
     srd: u8,
 }
@@ -115,6 +117,8 @@ where
             gyro_range: GyroConfig::GYRO_RANGE_2000DPS,
             gyro_calibration: Calibration::default(),
             gyro_measurement: Measurement::default(),
+
+            temp_measurement: 0f64,
 
             bandwidth: DLPFBandwidth::DLPF_BANDWIDTH_MAX,
             srd: 0u8,
@@ -279,9 +283,6 @@ where
         Ok(())
     }
 
-    // TODO add function to read accelerometer
-    // TODO add function to read gyroscope
-    // TODO add function to read temperature
     pub fn read_sensor(&mut self) -> Result<(), ICMError> {
         let mut buffer: [u8; 15] = [0u8; 15];
         self.read_registers(abs::IMU_OUT, &mut buffer)?;
@@ -289,24 +290,24 @@ where
         self.accel_measurement.counts[0] = read_hl!(buffer, 0usize);
         self.accel_measurement.counts[1] = read_hl!(buffer, 2usize);
         self.accel_measurement.counts[2] = read_hl!(buffer, 4usize);
-
+        let temp_counts: i16 = read_hl!(buffer, 6usize);
         self.gyro_measurement.counts[0] = read_hl!(buffer, 8usize);
         self.gyro_measurement.counts[1] = read_hl!(buffer, 10usize);
         self.gyro_measurement.counts[2] = read_hl!(buffer, 12usize);
-        // TODO convert counts to measurements
+
 
         let acc_counts = &self.accel_measurement.counts;
         let acc_values = &mut self.accel_measurement.values;
         let acc_calib = &self.accel_measurement.calibration;
-
         acc_values[0] = (turn!(abs::tX, acc_counts) * acc_calib.scale - acc_calib.B[0]*acc_calib.S[0]) as f64;
         acc_values[1] = (turn!(abs::tY, acc_counts) * acc_calib.scale - acc_calib.B[1]*acc_calib.S[1]) as f64;
         acc_values[2] = (turn!(abs::tZ, acc_counts) * acc_calib.scale - acc_calib.B[2]*acc_calib.S[2]) as f64;
 
+        self.temp_measurement = (((temp_counts as f64) - abs::temp_offset)/abs::temp_scale) + abs::temp_offset;
+
         let gyro_counts = &self.gyro_measurement.counts;
         let gyro_values = &mut self.gyro_measurement.values;
         let gyro_calib = &self.gyro_measurement.calibration;
-
         gyro_values[0] = (turn!(abs::tX, gyro_counts) * gyro_calib.scale - gyro_calib.B[0]) as f64;
         gyro_values[1] = (turn!(abs::tY, gyro_counts) * gyro_calib.scale - gyro_calib.B[1]) as f64;
         gyro_values[2] = (turn!(abs::tZ, gyro_counts) * gyro_calib.scale - gyro_calib.B[2]) as f64;
@@ -367,8 +368,5 @@ where
 }
 
 /*
- TODO add measure functions
  1. TODO add calibration functions to find bias and scale
- 2. TODO add transformation matrix that can be set by user
- 3. TODO read the accelerometer and gyro output registers, process it blah blah
 */
