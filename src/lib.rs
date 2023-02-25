@@ -429,7 +429,7 @@ where
 
 
 
-    fn whoami(&mut self) -> Result<u8, ICMError> {
+    pub fn whoami(&mut self) -> Result<u8, ICMError> {
         let whoami_addr: u8 = abs::WHO_AM_I;
         let mut id: u8 = 0x00;
         self.read_reg(whoami_addr, &mut id)?;
