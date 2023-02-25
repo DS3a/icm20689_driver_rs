@@ -50,6 +50,7 @@ pub struct Measurement {
     pub values: [f64; 3],
 }
 
+#[derive(Debug)]
 pub enum ICMError {
     I2cReadError,
     I2cWriteError,
