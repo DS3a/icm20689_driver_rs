@@ -19,6 +19,7 @@ macro_rules! read_hl {
     };
 }
 
+#[derive(Copy, Clone)]
 struct Calibration {
     scale: f64,
     num_samples: usize,
@@ -43,7 +44,7 @@ impl Default for Calibration {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Measurement {
     calibration: Calibration,
     counts: [i16; 3],
@@ -429,7 +430,14 @@ where
         Ok(())
     }
 
+    pub fn read_accelerometer(&mut self) -> Measurement {
+        self.accel_measurement.clone()
+    }
 
+    pub fn read_gyroscope(&mut self) -> Measurement {
+        self.gyro_measurement.values = [-self.gyro_measurement.values[0], -self.gyro_measurement.values[1], self.gyro_measurement.values[3]];
+        self.gyro_measurement.clone()
+    }
 
     pub fn whoami(&mut self) -> Result<u8, ICMError> {
         let whoami_addr: u8 = abs::WHO_AM_I;
