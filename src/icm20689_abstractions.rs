@@ -34,8 +34,8 @@ pub enum GyroConfig {
 register_value!(GYRO_FCHOICE_B_8173HZ, 0x01);
 register_value!(GYRO_FCHOICE_B_3281HZ, 0x10);
 
-pub const tX: [f64; 3] = [1f64, 0f64, 0f64];
-pub const tY: [f64; 3] = [0f64, 1f64, 0f64];
+pub const tX: [f64; 3] = [0f64, -1f64, 0f64];
+pub const tY: [f64; 3] = [1f64, 0f64, 0f64];
 pub const tZ: [f64; 3] = [0f64, 0f64, 1f64];
 
 #[repr(u8)]
