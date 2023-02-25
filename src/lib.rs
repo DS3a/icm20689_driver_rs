@@ -1,6 +1,7 @@
 #![no_std]
 #![allow(dead_code)]
 use embedded_hal::blocking::{delay::DelayMs, i2c};
+pub use embedded_hal::blocking::i2c::*;
 
 mod icm20689_abstractions;
 pub use abs::{AccelConfig, DLPFBandwidth, GyroConfig};
