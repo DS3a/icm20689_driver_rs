@@ -143,7 +143,8 @@ where
             // check the whoami register of the ICM
             if let Ok(icm_id) = self.whoami() {
                 if icm_id != 152 {
-                    return Err(ICMError::ICMIDError);
+                    // println!("bypassing icmiderror for now");
+                    // return Err(ICMError::ICMIDError);
                 }
             } else {
                 return Err(ICMError::I2cReadError);
