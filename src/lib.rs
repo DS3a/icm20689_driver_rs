@@ -355,7 +355,7 @@ where
     }
 
     // TODO add function to calibrate accelerometer
-    fn calibrate_accel<D>(&mut self, delay: &mut D) -> Result<(), ICMError>
+    pub fn calibrate_accel<D>(&mut self, delay: &mut D) -> Result<(), ICMError>
     where
         D: DelayMs<u16>
     {
