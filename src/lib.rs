@@ -314,8 +314,9 @@ where
         Ok(())
     }
 
-    pub fn calibrate_gyro<D>(&mut self, delay: &mut D)-> Result<(), ICMError>
-        where D: DelayMs<u16>
+    pub fn calibrate_gyro<D>(&mut self, delay: &mut D) -> Result<(), ICMError>
+    where
+        D: DelayMs<u16>,
     {
         let old_gyro_range = self.gyro_range.clone();
         self.set_gyro_range(abs::GyroConfig::GYRO_RANGE_250DPS)?;
@@ -352,6 +353,81 @@ where
     }
 
     // TODO add function to calibrate accelerometer
+    fn calibrate_accel<D>(&mut self, delay: &mut D) -> Result<(), ICMError>
+    where
+        D: DelayMs<u16>
+    {
+        let old_accel_range = self.accel_range.clone();
+        self.set_accel_range(abs::AccelConfig::ACCEL_RANGE_2G)?;
+
+        let old_bandwidth = self.bandwidth.clone();
+        self.set_dlpf_bandwidth(DLPFBandwidth::DLPF_BANDWIDTH_21HZ)?;
+
+        let old_srd = self.srd.clone();
+        self.set_srd(19u8)?;
+
+        let calib = &mut self.accel_measurement.calibration;
+        calib.num_samples = 100;
+
+        calib.BD[0] = 0f64;
+        calib.BD[1] = 0f64;
+        calib.BD[2] = 0f64;
+        drop(calib);
+        for _ in 0..(self.accel_measurement.calibration.num_samples) {
+            self.read_sensor()?;
+            let calib = &mut self.accel_measurement.calibration;
+            let values = &self.accel_measurement.values;
+            calib.BD[0] += (values[0] / calib.S[0] + calib.B[0])/(calib.num_samples as f64);
+            calib.BD[1] += (values[1] / calib.S[1] + calib.B[1])/(calib.num_samples as f64);
+            calib.BD[2] += (values[2] / calib.S[2] + calib.B[2])/(calib.num_samples as f64);
+            delay.delay_ms(20);
+        }
+
+        let calib = &mut self.accel_measurement.calibration;
+
+        if calib.BD[0] > 9.0 {
+            calib.max[0] = calib.BD[0];
+        }
+        if calib.BD[1] > 9.0 {
+            calib.max[1] = calib.BD[1];
+        }
+        if calib.BD[2] > 9.0 {
+            calib.max[2] = calib.BD[2];
+        }
+
+        if calib.BD[0] < -9.0 {
+            calib.min[0] = calib.BD[0];
+        }
+        if calib.BD[1] < -9.0 {
+            calib.min[1] = calib.BD[1];
+        }
+        if calib.BD[2] < -9.0 {
+            calib.min[2] = calib.BD[2];
+        }
+
+        if ((calib.min[0] > 9.0) || (calib.min[0] < -9.0)) &&
+            ((calib.max[0] > 9.0) || (calib.max[0]) < -9.0) {
+            calib.B[0] = (calib.min[0] + calib.max[0]) / 2.0;
+            calib.S[0] = abs::g / calib.B[0];
+        }
+        if ((calib.min[1] > 9.0) || (calib.min[1] < -9.0)) &&
+            ((calib.max[1] > 9.0) || (calib.max[1]) < -9.0) {
+            calib.B[1] = (calib.min[1] + calib.max[1]) / 2.0;
+            calib.S[1] = abs::g / calib.B[1];
+        }
+        if ((calib.min[2] > 9.0) || (calib.min[2] < -9.0)) &&
+            ((calib.max[2] > 9.0) || (calib.max[2]) < -9.0) {
+            calib.B[2] = (calib.min[2] + calib.max[2]) / 2.0;
+            calib.S[2] = abs::g / calib.B[2];
+        }
+
+        self.set_accel_range(old_accel_range)?;
+        self.set_dlpf_bandwidth(old_bandwidth)?;
+        self.set_srd(old_srd)?;
+        Ok(())
+    }
+
+
 
     fn whoami(&mut self) -> Result<u8, ICMError> {
         let whoami_addr: u8 = abs::WHO_AM_I;
@@ -362,7 +438,6 @@ where
 }
 
 /*
- 1. TODO add calibration functions to find bias and scale
- 2. TODO add functions to get the values measured
- 3. TODO add functionality to preload calibration values
- */
+2. TODO add functions to get the values measured
+3. TODO add functionality to preload calibration values
+*/
