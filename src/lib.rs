@@ -436,7 +436,7 @@ where
 
     // this puts both in the same frame
     pub fn read_gyroscope(&mut self) -> Measurement {
-        self.gyro_measurement.values = [-self.gyro_measurement.values[0], -self.gyro_measurement.values[1], self.gyro_measurement.values[3]];
+        self.gyro_measurement.values = [-self.gyro_measurement.values[0], -self.gyro_measurement.values[1], self.gyro_measurement.values[2]];
         self.gyro_measurement.clone()
     }
 
