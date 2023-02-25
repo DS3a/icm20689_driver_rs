@@ -65,10 +65,10 @@ where
     icm_address: u8,
 
     accel_range: AccelConfig,
-    accel_measurement: Measurement,
+    pub accel_measurement: Measurement,
 
     gyro_range: GyroConfig,
-    gyro_measurement: Measurement,
+    pub gyro_measurement: Measurement,
 
     temp_measurement: f64,
 
