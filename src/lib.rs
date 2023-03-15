@@ -1,7 +1,7 @@
 #![no_std]
 #![allow(dead_code)]
-use embedded_hal::blocking::{delay::DelayMs, i2c};
 pub use embedded_hal::blocking::i2c::*;
+use embedded_hal::blocking::{delay::DelayMs, i2c};
 
 mod icm20689_abstractions;
 pub use abs::{AccelConfig, DLPFBandwidth, GyroConfig};
@@ -359,7 +359,7 @@ where
     // TODO add function to calibrate accelerometer
     pub fn calibrate_accel<D>(&mut self, delay: &mut D) -> Result<(), ICMError>
     where
-        D: DelayMs<u16>
+        D: DelayMs<u16>,
     {
         let old_accel_range = self.accel_range.clone();
         self.set_accel_range(abs::AccelConfig::ACCEL_RANGE_2G)?;
@@ -381,9 +381,9 @@ where
             self.read_sensor()?;
             let calib = &mut self.accel_measurement.calibration;
             let values = &self.accel_measurement.values;
-            calib.BD[0] += (values[0] / calib.S[0] + calib.B[0])/(calib.num_samples as f64);
-            calib.BD[1] += (values[1] / calib.S[1] + calib.B[1])/(calib.num_samples as f64);
-            calib.BD[2] += (values[2] / calib.S[2] + calib.B[2])/(calib.num_samples as f64);
+            calib.BD[0] += (values[0] / calib.S[0] + calib.B[0]) / (calib.num_samples as f64);
+            calib.BD[1] += (values[1] / calib.S[1] + calib.B[1]) / (calib.num_samples as f64);
+            calib.BD[2] += (values[2] / calib.S[2] + calib.B[2]) / (calib.num_samples as f64);
             delay.delay_ms(20);
         }
 
@@ -409,18 +409,21 @@ where
             calib.min[2] = calib.BD[2];
         }
 
-        if ((calib.min[0] > 9.0) || (calib.min[0] < -9.0)) &&
-            ((calib.max[0] > 9.0) || (calib.max[0]) < -9.0) {
+        if ((calib.min[0] > 9.0) || (calib.min[0] < -9.0))
+            && ((calib.max[0] > 9.0) || (calib.max[0]) < -9.0)
+        {
             calib.B[0] = (calib.min[0] + calib.max[0]) / 2.0;
             calib.S[0] = abs::g / calib.B[0];
         }
-        if ((calib.min[1] > 9.0) || (calib.min[1] < -9.0)) &&
-            ((calib.max[1] > 9.0) || (calib.max[1]) < -9.0) {
+        if ((calib.min[1] > 9.0) || (calib.min[1] < -9.0))
+            && ((calib.max[1] > 9.0) || (calib.max[1]) < -9.0)
+        {
             calib.B[1] = (calib.min[1] + calib.max[1]) / 2.0;
             calib.S[1] = abs::g / calib.B[1];
         }
-        if ((calib.min[2] > 9.0) || (calib.min[2] < -9.0)) &&
-            ((calib.max[2] > 9.0) || (calib.max[2]) < -9.0) {
+        if ((calib.min[2] > 9.0) || (calib.min[2] < -9.0))
+            && ((calib.max[2] > 9.0) || (calib.max[2]) < -9.0)
+        {
             calib.B[2] = (calib.min[2] + calib.max[2]) / 2.0;
             calib.S[2] = abs::g / calib.B[2];
         }
@@ -437,7 +440,11 @@ where
 
     // this puts both in the same frame
     pub fn read_gyroscope(&mut self) -> Measurement {
-        self.gyro_measurement.values = [-self.gyro_measurement.values[0], -self.gyro_measurement.values[1], self.gyro_measurement.values[2]];
+        self.gyro_measurement.values = [
+            -self.gyro_measurement.values[0],
+            -self.gyro_measurement.values[1],
+            self.gyro_measurement.values[2],
+        ];
         self.gyro_measurement.clone()
     }
 

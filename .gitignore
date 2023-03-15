@@ -1,2 +1,4 @@
 /target
 /Cargo.lock
+/examples/esp-test/target
+/examples/esp-test/Cargo.lock

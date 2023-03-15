@@ -1,0 +1,25 @@
+[package]
+name = "esp-test"
+version = "0.1.0"
+authors = ["ds3a"]
+edition = "2021"
+resolver = "2"
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
+
+[features]
+pio = ["esp-idf-sys/pio"]
+
+[dependencies]
+esp-idf-sys = { version = "0.31.11", features = ["binstart"] }
+embedded-hal = "*"
+esp-idf-hal = "*"
+icm20689_driver_rs = { git = "https://github.com/DS3a/icm20689_driver_rs.git" }
+
+[build-dependencies]
+embuild = "0.30.4"
